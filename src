@@ -1,0 +1,48 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.tsa.seasonal import STL
+from statsmodels.tsa.arima.model import ARIMA
+
+# Load historical sales data
+# Replace 'sales_data.csv' with your CSV file containing historical sales data
+sales_data = pd.read_csv('sales_data.csv', parse_dates=['date'], index_col='date')
+sales_data = sales_data.asfreq(pd.infer_freq(sales_data.index))
+
+# Decompose the time series into its components
+stl = STL(sales_data['sales'], seasonal=13)
+res = stl.fit()
+seasonal, trend, resid = res.seasonal, res.trend, res.resid
+
+# Plot the decomposition components
+plt.figure(figsize=(12, 8))
+plt.subplot(4, 1, 1)
+plt.plot(sales_data['sales'], label='Original')
+plt.legend(loc='upper left')
+plt.subplot(4, 1, 2)
+plt.plot(trend, label='Trend')
+plt.legend(loc='upper left')
+plt.subplot(4, 1, 3)
+plt.plot(seasonal, label='Seasonal')
+plt.legend(loc='upper left')
+plt.subplot(4, 1, 4)
+plt.plot(resid, label='Residual')
+plt.legend(loc='upper left')
+plt.show()
+
+# Fit an ARIMA model
+arima_model = ARIMA(sales_data['sales'], order=(1, 1, 1), seasonal_order=(0, 1, 1, 12))
+arima_results = arima_model.fit()
+
+# Forecast sales for the next 12 months
+forecast = arima_results.get_forecast(steps=12)
+forecast_mean = forecast.predicted_mean
+forecast_ci = forecast.conf_int(alpha=0.05)
+
+# Plot the forecast
+plt.figure(figsize=(12, 6))
+plt.plot(sales_data['sales'], label='Historical Sales')
+plt.plot(forecast_mean, label='Forecasted Sales', color='red')
+plt.fill_between(forecast_ci.index, forecast_ci.iloc[:, 0], forecast_ci.iloc[:, 1], color='pink')
+plt.legend(loc='upper left')
+plt.show()
